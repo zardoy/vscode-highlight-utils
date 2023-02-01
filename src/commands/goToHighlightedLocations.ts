@@ -3,6 +3,7 @@ import { CommandHandler, registerExtensionCommand } from 'vscode-framework'
 
 export default () => {
     const generalCommandHandler: CommandHandler = async ({ command }, { goToMode, kindFilter, at } = {}) => {
+        let noResultsMessage = 'No highlights'
         const { activeTextEditor: editor } = vscode.window
         if (!editor) return
         const {
@@ -12,7 +13,6 @@ export default () => {
         const requestPos = selection.active
         let highlights: vscode.DocumentHighlight[] | undefined =
             (await vscode.commands.executeCommand('vscode.executeDocumentHighlights', uri, requestPos)) ?? []
-        if (highlights.length === 0) return
 
         if (command === 'goToHighlightedLocationsRead') kindFilter = vscode.DocumentHighlightKind.Read
         if (command === 'goToHighlightedLocationsWrite') kindFilter = vscode.DocumentHighlightKind.Write
@@ -30,15 +30,22 @@ export default () => {
             return
         }
 
+        if (locations.length > 0 && locations.every(({ range }) => range.contains(requestPos))) {
+            locations.splice(0, locations.length)
+            noResultsMessage = 'No other highlights'
+        }
+
         const hasLocationInPos = locations.some(location => location.range.contains(requestPos))
         if (!goToMode) goToMode = vscode.workspace.getConfiguration('editor').get('gotoLocation.multipleReferences') ?? 'peek'
         await vscode.commands.executeCommand(
-            'editor.action.peekLocations',
+            'editor.action.goToLocations',
             uri,
             // dx: preserve cursor location when possible!
             hasLocationInPos ? requestPos : locations[0]?.range.start ?? requestPos,
             locations,
             goToMode,
+            noResultsMessage,
+            true,
         )
     }
 
