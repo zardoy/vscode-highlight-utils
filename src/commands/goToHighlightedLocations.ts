@@ -24,7 +24,7 @@ export default () => {
             const location = locations.at(at)
             if (location) {
                 const pos = location.range.start
-                editor.selection = new vscode.Selection(pos, pos)
+                await vscode.commands.executeCommand('editor.action.goToLocations', uri, pos, [location], 'goto', noResultsMessage)
             }
 
             return
