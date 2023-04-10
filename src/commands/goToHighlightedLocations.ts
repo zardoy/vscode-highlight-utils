@@ -43,6 +43,7 @@ export default () => {
             editor.revealRange(editor.selection)
             return
         }
+
         await vscode.commands.executeCommand(
             'editor.action.goToLocations',
             uri,
