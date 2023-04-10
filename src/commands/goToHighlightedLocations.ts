@@ -18,16 +18,15 @@ export default () => {
         if (command === 'goToHighlightedLocationsWrite') kindFilter = vscode.DocumentHighlightKind.Write
         if (kindFilter) highlights = highlights.filter(({ kind }) => kind === kindFilter)
 
-        const locations: vscode.Location[] = highlights.map(({ range }) => new vscode.Location(uri, range))
+        let locations: vscode.Location[] = highlights.map(({ range }) => new vscode.Location(uri, range))
         // arg: request to go to specific location e.g. 0 or -1
         if (at !== undefined) {
             const location = locations.at(at)
             if (location) {
-                const pos = location.range.start
-                editor.selection = new vscode.Selection(pos, pos)
+                locations = [location]
+            } else {
+                return
             }
-
-            return
         }
 
         if (locations.length > 0 && locations.every(({ range }) => range.contains(requestPos))) {
@@ -36,12 +35,19 @@ export default () => {
         }
 
         const hasLocationInPos = locations.some(location => location.range.contains(requestPos))
-        if (!goToMode) goToMode = vscode.workspace.getConfiguration('editor').get('gotoLocation.multipleReferences') ?? 'peek'
+        goToMode ??= vscode.workspace.getConfiguration('editor').get('gotoLocation.multipleReferences') ?? 'peek'
+        // workaround: vscode should open peek widget only on goToMode = gotoAndPeek
+        if (goToMode === 'goto' && locations.length === 1) {
+            const pos = locations[0]!.range.start
+            editor.selection = new vscode.Selection(pos, pos)
+            editor.revealRange(editor.selection)
+            return
+        }
         await vscode.commands.executeCommand(
             'editor.action.goToLocations',
             uri,
             // dx: preserve cursor location when possible!
-            hasLocationInPos ? requestPos : locations[0]?.range.start ?? requestPos,
+            hasLocationInPos || goToMode === 'peek' ? requestPos : locations[0]?.range.start ?? requestPos,
             locations,
             goToMode,
             noResultsMessage,
