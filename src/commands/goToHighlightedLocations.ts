@@ -20,7 +20,7 @@ export default () => {
 
         const locations: vscode.Location[] = highlights.map(({ range }) => new vscode.Location(uri, range))
         // arg: request to go to specific location e.g. 0 or -1
-        if (at) {
+        if (at !== undefined) {
             const location = locations.at(at)
             if (location) {
                 const pos = location.range.start
